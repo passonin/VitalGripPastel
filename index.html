@@ -1,6 +1,5 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><link rel="manifest" href="/manifest.webmanifest" />
-
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Vital Grip</title>
 <style>
@@ -18,19 +17,17 @@ body{
   justify-content:center;
   overflow:hidden;
 }
-
 .app{
   width:min(100vw,480px);
   height:100dvh;
   padding:18px;
-  background:linear-gradient(180deg,#f9f9f9,#f2f2f2 60%,#ffffff);
+  background:linear-gradient(180deg,#f9f9f9,#f2f2f2 60%,#f9f9f9);
   display:flex;
   flex-direction:column;
   gap:14px;
   border-radius:22px;
   box-shadow:0 2px 8px #e3e3e3;
 }
-
 .title{
   text-align:center;
   font-size:28px;
@@ -38,7 +35,6 @@ body{
   letter-spacing:3px;
   color:#555;
 }
-
 .glow{
   width:80%;
   height:4px;
@@ -52,7 +48,6 @@ body{
   opacity:1;
   box-shadow:0 0 10px #123040;
 }
-
 .grid{
   flex:1;
   min-height:0;
@@ -61,7 +56,6 @@ body{
   grid-template-rows:repeat(3,1fr);
   gap:12px;
 }
-
 .hold{
   position:relative;
   border:0;
@@ -87,7 +81,6 @@ body{
   background:#fff;
   border:3px solid #cfd6da;
 }
-
 .hold.lit:before{
   background:var(--c);
   box-shadow:0 0 16px var(--c), 0 2px 4px #cfcfcf;
@@ -95,7 +88,6 @@ body{
 .hold.lit:after{
   border-color:#fff;
 }
-
 .status{
   display:grid;
   grid-template-columns:repeat(3,1fr);
@@ -122,20 +114,17 @@ body{
   color:#7aa8b7;
   margin-top:3px;
 }
-
 .hint{
   text-align:center;
   height:38px;
   font-size:26px;
   color:#888;
 }
-
 .controls{
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:11px;
 }
-
 .ctrl{
   height:70px;
   border:0;
@@ -145,24 +134,10 @@ body{
   font-weight:bold;
   box-shadow:0 4px 10px #d0d0d0;
 }
-
-.power{
-  background:#c47f7f;   /* くすみローズ（濃いピンク） */
-}
-
-.next{
-  background:#8f93c7;   /* くすみラベンダー（少し濃い紫） */
-}
-
-.color{
-  background:#6fa3bd;   /* くすみブルー（北欧家具の青） */
-}
-
-.ok{
-  background:#7fb28a;   /* くすみグリーン（北欧の植物色） */
-}
-
-
+.power{background:#c47f7f;   /* くすみローズ（濃いピンク） */}
+.next{background:#8f93c7;   /* くすみラベンダー（少し濃い紫） */}
+.color{background:#6fa3bd;   /* くすみブルー（北欧家具の青） */}
+.ok{background:#7fb28a;   /* くすみグリーン（北欧の植物色） */}
 .titleRow{
   position:relative;
   height:62px;
@@ -170,7 +145,6 @@ body{
   justify-content:flex-end;
   align-items:center;
 }
-
 .title{
   position:absolute;
   left:50%;
@@ -182,19 +156,29 @@ body{
   pointer-events:none;
   color:#666;
 }
-
 .btBtn{
   width:66px;
   height:48px;
   border:0;
   border-radius:14px;
-  background:#b7d8e8;
+  background:#f6f6f6;
   display:flex;
   justify-content:center;
   align-items:center;
   cursor:pointer;
   box-shadow:0 3px 8px #dcdcdc;
   transition:.2s;
+}
+#volBtn{
+  width:66px;
+  padding:0;
+  line-height:1;
+}
+#volBtn svg{
+  display:block;
+  width:52px;
+  height:42px;
+  overflow:visible;
 }
 .btIcon{
   width:34px;
@@ -205,20 +189,59 @@ body{
   stroke-linecap:round;
   stroke-linejoin:round;
 }
-.btBtn.connected{
-  background:#a8d4e3;
-  box-shadow:0 0 10px #a8d4e3;
+.btBtn.muted{
+  background:#e9ecef;
+  box-shadow:0 0 10px #dcdcdc;
+}
+.connectPage{
+  position:fixed;
+  inset:0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:#f5f6f7;
+  z-index:1000;
+}
+.startBtn{
+  width:250px;
+  height:250px;
+  border:none;
+  border-radius:50%;
+  background:linear-gradient(180deg,#9bc3d4,#7da9bd);
+  color:white;
+  font-size:22px;
+  font-weight:bold;
+  letter-spacing:1px;
+  cursor:pointer;
+  box-shadow:0 15px 35px rgba(0,0,0,.18),inset 0 4px 8px rgba(255,255,255,.45);
+  transition:.15s;
+}
+.startBtn:active{
+  transform:translateY(6px);
+  box-shadow:
+    0 4px 10px rgba(0,0,0,.15),
+    inset 0 3px 6px rgba(255,255,255,.3);
+}
+.connectStatus{
+  margin-top:30px;
+  color:#777;
+  font-size:22px;
+  min-height:30px;
 }
 
-</style></head><body><main class="app">
+</style></head><body><div id="connectPage" class="connectPage">
+<h1>Vital Grip</h1> 
+<div style="display:flex;
+flex-direction:column;
+align-items:center;">
+ <button id="connectBtn" class="startBtn"><h1>START</h1></button>
+    <div id="connectStatus" class="connectStatus"></div>
+</div></div>
+<main class="app" id="mainPage" style="display:none;">
 <div class="titleRow">
   <div style="width:62px;"></div>
   <div class="title">Vital Grip</div>
-  <button id="btBtn" class="btBtn" title="Bluetooth接続">
-    <svg viewBox="0 0 24 24" class="btIcon">
-      <path d="M12 2v20l7-6-5-4 5-4-7-6zm2.5 4.5L17 8l-2.5 1.5V6.5zm0 8L17 16l-2.5 1.5v-3zM5 8l5 4-5 4M10 12L5 8m0 8 5-4"/>
-    </svg>
-  </button>
+  <button id="volBtn" class="btBtn" title="Volume" aria-label="音量レベル1"></button>
 </div><div class="glow"></div><section class="grid" id="grid"></section>
 <section class="status"><div class="cell"><div class="label">Mode</div><div class="value" id="mode">OFF</div></div><div class="cell"><div class="label">Select</div><div class="value" id="sel">0/12</div></div><div class="cell"><div class="label">Turn</div><div class="value" id="cnt">0/30</div></div></section>
 <div class="hint" id="hint">電源を押して開始</div>
@@ -239,116 +262,227 @@ let bleServer=null;
 let bleService=null;
 let bleCharacteristic=null;
 let bleReceiveBuffer="";
+const VOLUME_STORAGE_KEY = "vitalGripVolume";
+let volumeLevel = (() => {
+  const saved = Number(localStorage.getItem(VOLUME_STORAGE_KEY));
+  return Number.isInteger(saved) && saved >= 0 && saved <= 3 ? saved : 1;
+})(); // 1→2→3→ミュート→1
+let nextBusy=false;
+// BLE GATT write queue: TURNNEXTと5byte LEDデータの書き込みを直列化
+let bleWriteQueue = Promise.resolve();
+
+function enqueueBLEWrite(value, label="BLE WRITE") {
+  const task = bleWriteQueue.then(async () => {
+    if (!bleDevice || !bleDevice.gatt.connected || !bleCharacteristic) {
+      return false;
+    }
+    try {
+      await bleCharacteristic.writeValue(value);
+      return true;
+    } catch (err) {
+      console.log(label + " error:", err);
+      return false;
+    }
+  });
+
+  // 1件が失敗しても、後続のBLE送信を止めない
+  bleWriteQueue = task.then(() => undefined, () => undefined);
+  return task;
+}
+
+function updateVolumeButton(){
+  const btn = document.getElementById("volBtn");
+  if(!btn) return;
+
+  // 音量0=波なし、1=波1本、2=波2本、3=波3本
+  const waves = [
+    '<path d="M23 14 Q29 20 23 26"/>',
+    '<path d="M23 14 Q29 20 23 26"/><path d="M27 10 Q36 20 27 30"/>',
+    '<path d="M23 14 Q29 20 23 26"/><path d="M27 10 Q36 20 27 30"/><path d="M31 6 Q43 20 31 34"/>'
+  ];
+  const waveMarkup = volumeLevel === 0 ? '' : waves[volumeLevel - 1];
+
+  btn.innerHTML = `
+    <svg viewBox="0 0 48 40" role="img" aria-hidden="true">
+      <path d="M3 15 H9 L19 7 V33 L9 25 H3 Z" fill="#111" stroke="#111" stroke-linejoin="round"/>
+      <g fill="none" stroke="#111" stroke-width="2.5" stroke-linecap="round">
+        ${waveMarkup}
+      </g>
+    </svg>`;
+  btn.title = volumeLevel === 0 ? "ミュート" : `音量レベル${volumeLevel}`;
+  btn.setAttribute("aria-label", btn.title);
+  btn.classList.toggle("muted", volumeLevel === 0);
+}
 
 //localStorage.removeItem("vitalTaskSets");
 
 async function connectBLE(){try{
-bleDevice=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:["0000dfb0-0000-1000-8000-00805f9b34fb"]});
+bleDevice=await navigator.bluetooth.requestDevice({
+filters:[{namePrefix:"VitalGrip"}],
+optionalServices:["0000dfb0-0000-1000-8000-00805f9b34fb"]});
 bleServer=await bleDevice.gatt.connect();
 bleService=await bleServer.getPrimaryService("0000dfb0-0000-1000-8000-00805f9b34fb");
 bleCharacteristic=await bleService.getCharacteristic("0000dfb1-0000-1000-8000-00805f9b34fb");
 
-await bleCharacteristic.startNotifications();bleCharacteristic.addEventListener("characteristicvaluechanged",e=>{const s=new TextDecoder().decode(e.target.value).trim();console.log("BLE RX:",s);if(s==="NEXT" && mode==="play"){nextTurn();}});
-document.getElementById("btBtn").classList.add("connected");
-hint.textContent="接続完了";
+await bleCharacteristic.startNotifications();bleCharacteristic.addEventListener(
+  "characteristicvaluechanged",
+  e=>{
+
+    const s =
+      new TextDecoder()
+      .decode(e.target.value)
+      .trim();
+
+    console.log(
+      "BLE RX:",
+      s
+    );
+
+    if(
+      s==="NEXT" &&
+      mode==="play"
+    ){
+      nextTurn();
+    }
+  }
+);
+document.getElementById("connectStatus").textContent ="接続完了";
+hint.textContent="電源を押して開始";
+document.getElementById("connectPage").style.display="none";
+document.getElementById("mainPage").style.display="flex";
 await sendLED("ALLOFF");
+await sendLED("VOL," + volumeLevel);
 bleDevice.addEventListener("gattserverdisconnected",()=>{
-document.getElementById("btBtn").classList.remove("connected");
+document.getElementById("connectPage").style.display="flex";
+document.getElementById("mainPage").style.display="none";
+
+document.getElementById("connectStatus").textContent =
+  "切断されました";
 bleCharacteristic=null;
 bleService=null;
 bleServer=null;
 bleReceiveBuffer="";
-hint.textContent="無線切断";
-});
+hint.textContent="無線切断";});}catch(err){console.log(err);document.getElementById("connectStatus").textContent="接続失敗";}}
+document.getElementById("connectBtn").onclick =
+async ()=>{document.getElementById("connectStatus").textContent ="接続中...";await connectBLE();};
+document.getElementById("volBtn").onclick = async ()=>{
+  volumeLevel = volumeLevel >= 3 ? 0 : volumeLevel + 1;
+  localStorage.setItem(VOLUME_STORAGE_KEY, String(volumeLevel));
+  updateVolumeButton();
 
-}catch(err){console.log(err);hint.textContent="接続失敗";}}
-document.getElementById("btBtn").onclick = async ()=>{if(bleDevice && bleDevice.gatt && bleDevice.gatt.connected){await disconnectBLE();}else{await connectBLE();}};
+  if (bleCharacteristic) {
+    await sendLED("VOL," + volumeLevel);
+  }
+};
 
+// ページ起動時に保存済みの音量表示を復元
+updateVolumeButton();
 function onBleReceive(e){let s=new TextDecoder().decode(e.target.value).trim();console.log("BLE RX:",s);if(s==="NEXT")nextTurn();}
 
-async function nextTurn(){if(mode!=="play")return;playTurn++;if(playTurn>=playTask.length){h.forEach((_,i)=>paint(i,null));prevPlayHold=null;await sendLED("STOP");mode=playReturnMode;if(mode==="two")halves();else all(one);update();return;}h.forEach((_,i)=>paint(i,null));paint(playTask[playTurn-1],playColor(playTurn-1));paint(playTask[playTurn],playColor(playTurn));await sendLEDState();update();}
-async function sendHold(no){if(!bleCharacteristic) return;await bleCharacteristic.writeValue(new TextEncoder().encode(String(no)));}
-async function sendLED(cmd){try{if(!bleDevice) return;if(!bleDevice.gatt.connected) return;if(!bleCharacteristic) return;await bleCharacteristic.writeValue(new TextEncoder().encode(cmd + "\n"));}catch(err){console.log("BLE send error",err);}}
-async function sendLEDState(){
-  if(mode==="off" || !bleCharacteristic ||
-     !bleDevice || !bleDevice.gatt.connected)return;
+async function nextTurn(){
 
-  // 12個のHoldを0～7の色番号にする
-  const led = [];
-
-  for(let i=0;i<12;i++){
-    if(h[i].classList.contains("lit")){
-      led[i] = getHoldColor(i) + 1;  // 1～7
-    }else{
-      led[i] = 0;                    // OFF
+    if(nextBusy){
+        console.log(
+            "NEXT IGNORE"
+        );
+        return;
     }
+
+    nextBusy=true;
+
+    try{if(mode!=="play")return;playTurn++;if(playTurn>=playTask.length){h.forEach((_,i)=>paint(i,null));prevPlayHold=null;await sendLED("ALLOFF");mode=playReturnMode;if(mode==="two")halves();else previewColor(one);update();return;}h.forEach((_,i)=>paint(i,null));paint(playTask[playTurn-1],playColor(playTurn-1));paint(playTask[playTurn],playColor(playTurn));await sendLEDState();update();}
+
+    finally{
+
+        nextBusy=false;
+    }
+}
+
+async function sendHold(no){
+  return enqueueBLEWrite(new TextEncoder().encode(String(no)), "BLE HOLD TX");
+}
+
+async function sendLED(cmd){
+  return enqueueBLEWrite(
+    new TextEncoder().encode(cmd + "\n"),
+    "BLE COMMAND TX " + cmd
+  );
+}
+
+async function sendLEDState(){
+  if(mode==="off" || !bleCharacteristic || !bleDevice || !bleDevice.gatt.connected) return;
+
+  const led = [];
+  for(let i=0;i<12;i++){
+    led[i] = h[i].classList.contains("lit") ? getHoldColor(i) + 1 : 0;
   }
 
-  // 12個 × 3bit = 36bit → 5byte
   const data = new Uint8Array(5);
-
   let bitPos = 0;
-
   for(let i=0;i<12;i++){
     const v = led[i] & 0x07;
-
     const bytePos = Math.floor(bitPos / 8);
     const shift = bitPos % 8;
-
     data[bytePos] |= v << shift;
-
-    // 3bitが次のByteにまたがる場合
-    if(shift > 5){
-      data[bytePos + 1] |= v >> (8 - shift);
-    }
-
+    if(shift > 5) data[bytePos + 1] |= v >> (8 - shift);
     bitPos += 3;
   }
 
-  try{
-    await bleCharacteristic.writeValue(data);
-
-    console.log(
-      "BLE TX:",
-      Array.from(data)
-        .map(x=>x.toString(16).padStart(2,"0"))
-        .join(" ")
-    );
-
-  }catch(e){
-    console.log("LED STATE TX error:",e);
+  const sent = await enqueueBLEWrite(data, "LED STATE TX");
+  if(sent){
+    console.log("BLE TX:", Array.from(data).map(x=>x.toString(16).padStart(2,"0")).join(" "));
   }
 }
-
-
-function getHoldColor(i){
-  const c=h[i].style.getPropertyValue("--c");
-
-  for(let n=0;n<C.length;n++){
-    if(C[n][1]===c)return n;
-  }
-
-  return 0;
-}
-async function disconnectBLE(){try{if(bleDevice && bleDevice.gatt.connected){bleDevice.gatt.disconnect();}document.getElementById("btBtn").classList.remove("connected");bleCharacteristic = null;bleService = null;bleServer = null;hint.textContent = "無線切断";}catch(err){console.log(err);}}
-
+function getHoldColor(i){const c=h[i].style.getPropertyValue("--c");for(let n=0;n<C.length;n++){if(C[n][1]===c)return n;}return 0;}
+async function disconnectBLE(){try{if(bleDevice && bleDevice.gatt.connected){bleDevice.gatt.disconnect();}bleCharacteristic = null;bleService = null;bleServer = null;
+document.getElementById("connectPage").style.display = "flex";
+document.getElementById("mainPage").style.display = "none";
+document.getElementById("connectStatus").textContent ="未接続";}catch(err){console.log(err);}}
 const glowBar = document.querySelector(".glow");
-const C=[["赤","#ef2939"],["緑","#27c96f"],["青","#2f7df4"],["黄","#ffd43b"],["水","#21c8df"],["桃","#ff4f9a"],["白","#f4f7fb"]];
+const C=[["赤","#ef2939"],["緑","#27c96f"],["青","#2f7df4"],["黄","#ffd43b"],["水","#21c8df"],["桃","#ff4f9a"],["紫","#9933ff"]];
 const g=document.getElementById("grid"),modeE=document.getElementById("mode"),selE=document.getElementById("sel"),cntE=document.getElementById("cnt"),hint=document.getElementById("hint");
 for(let i=0;i<12;i++){let b=document.createElement("button");b.className="hold";b.dataset.i=i;g.appendChild(b)}
 const h=[...document.querySelectorAll(".hold")];
-const saved =localStorage.getItem("vitalTaskSets");if(saved){try{taskSets = JSON.parse(saved);}catch(e){console.error(e);}}
+// TASK1の仮初期設定（ホールド番号を0始まりに変換）
+// Hold番号: 2,4,3,1,2,4,3,1
+const DEFAULT_TASK1 = [1, 3, 2, 0, 1, 3, 2, 0];
 
-h.forEach(btn => {btn.onclick = () => {let idx = Number(btn.dataset.i);
+const saved = localStorage.getItem("vitalTaskSets");
+if (saved) {
+  try {
+    const parsed = JSON.parse(saved);
+    if (Array.isArray(parsed)) taskSets = parsed;
+  } catch (e) {
+    console.error("TASK DATA LOAD ERROR:", e);
+  }
+}
+
+// 保存データの配列を12 TASK分に整える
+if (!Array.isArray(taskSets)) taskSets = [];
+while (taskSets.length < 12) taskSets.push([]);
+
+// TASK1が未登録の場合だけ初期設定を登録する。
+// 既に保存されているTASK1やTASK2～12は上書きしない。
+if (!Array.isArray(taskSets[0]) || taskSets[0].length === 0) {
+  taskSets[0] = [...DEFAULT_TASK1];
+  localStorage.setItem("vitalTaskSets", JSON.stringify(taskSets));
+}
+
+h.forEach(btn => {btn.onclick = async () => {let idx = Number(btn.dataset.i);
 if(mode==="make"){currentTask[editTurn] = idx;h.forEach((_,i)=>paint(i,null));paint(idx,5);update();return;}
-if(mode==="play"){sendLED("TURNNEXT");return;}};});
+if(mode==="play"){
+  // TURNNEXTもBLE送信キューに登録し、LED状態データと重ねない
+  await sendLED("TURNNEXT");
+  return;
+}};});
 
 function paint(i,c){if(c===null){h[i].classList.remove("lit");h[i].style.removeProperty("--c");}else{h[i].classList.add("lit");h[i].style.setProperty("--c",C[c][1]);}}
 function all(c){for(let i=0;i<12;i++)paint(i,c);sendLEDState();}
-function halves(){for(let i=0;i<12;i++)paint(i,(i%2===0)?left:right);sendLEDState();}
+function previewColor(c){for(let i=0;i<12;i++)paint(i,null);paint(5,c);paint(6,c);sendLEDState();}
+function halves(){for(let i=0;i<12;i++)paint(i,null);paint(5,left);paint(6,right);sendLEDState();}
 function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}}
 function resetPairs(){pairs=[];for(let a=0;a<7;a++)for(let b=a+1;b<7;b++)pairs.push([a,b]);shuffle(pairs);pairNo=0}
-function randomDemo(){for(let i=0;i<12;i++){if(Math.random()<0.5){paint(i,null);}else{paint(i,Math.floor(Math.random()*7));}}sendLEDState();}
+function randomDemo(){for(let i=0;i<12;i++)paint(i,null);const ids=Array.from({length:12},(_,i)=>i).sort(()=>Math.random()-0.5);const count=2+Math.floor(Math.random()*5);for(let n=0;n<count;n++)paint(ids[n],Math.floor(Math.random()*7));sendLEDState();}
 function playColor(turnNo){if(twoPlay){return turnNo % 2 === 0? left: right;}return one;}
 function update(){modeE.textContent=mode==="one"?"1color":mode==="two"?"2color":mode==="demo" ? "Demo" :mode==="select" ? "Select" :mode==="make" ? "Set" :mode==="play"?"Play":"OFF";
 if(mode==="play"){selE.textContent = `${play+1}/12`;}else if(mode==="make"){selE.textContent = `${makePos+1}/12`;}else{selE.textContent = "0/12";};
@@ -364,35 +498,26 @@ else if(mode==="make")hint.textContent=`Task${selectedTask+1} ${editTurn+1}/${cu
 else hint.textContent=`Task ${play+1}/12 ▷：次Task`}
 
 document.getElementById("power").onclick=async()=>{on=!on;
-if(on){glowBar.classList.add("powerOn");mode="one";one=0;left=0;right=6;all(0);}
-else{
-  glowBar.classList.remove("powerOn");
-  clearInterval(demoTimer);
-  demoTimer=null;
-
-  h.forEach((_,i)=>paint(i,null));
-
-  await sendLED("ALLOFF");
-
-  mode="off";
-}update();};
+if(on){glowBar.classList.add("powerOn");mode="one";one=0;left=0;right=6;await sendLED("POWERON");previewColor(0);}
+else{glowBar.classList.remove("powerOn");clearInterval(demoTimer);demoTimer=null;h.forEach((_,i)=>paint(i,null));
+await sendLED("ALLOFF");mode="off";}update();};
 
 document.getElementById("next").onclick=()=>{
 if(!on)return;
 if(mode==="one"){mode="two";twoPlay=true;resetPairs();[left,right]=pairs.pop();pairNo++;halves();update();return}
 if(mode==="two"){mode="demo";randomDemo();demoTimer=setInterval(()=>{if(mode==="demo"){randomDemo();}},1000);update();return}
-if(mode==="demo"){clearInterval(demoTimer);demoTimer=null;mode="one";twoPlay=false;one=0;all(one);update();return}
+if(mode==="demo"){clearInterval(demoTimer);demoTimer=null;mode="one";twoPlay=false;one=0;previewColor(one);update();return}
 if(mode==="select"){selectedTask=(selectedTask+1)%12;h.forEach((_,i)=>paint(i,null));paint(selectedTask,playColor(playTurn));sendLEDState();update();return;}
 if(mode==="make"){if(currentTask[editTurn] === undefined){return;}editTurn++;if(editTurn >= currentTask.length){currentTask.push(undefined);}h.forEach((_,i)=>paint(i,null));if(currentTask[editTurn] !== undefined){paint(currentTask[editTurn],5);}sendLEDState();update();return;}
 if(mode==="play"){return;}};
 
-document.getElementById("color").onclick=()=>{if(!on)return;if(mode==="one"){one=(one+1)%7;all(one)}else if(mode==="two"){if(!pairs.length) resetPairs();[left,right] = pairs.pop();pairNo++;halves();};
+document.getElementById("color").onclick=()=>{if(!on)return;if(mode==="one"){one=(one+1)%7;previewColor(one)}else if(mode==="two"){if(!pairs.length) resetPairs();[left,right] = pairs.pop();pairNo++;halves();};
 if(mode==="make"){if(editTurn>0){editTurn--;h.forEach((_,i)=>paint(i,null));paint(currentTask[editTurn],5);sendLEDState();update();}return;}update()};
 document.getElementById("ok").onclick=async()=>{if(!on)return;
 if(mode==="one"){playReturnMode = "one";selectSource="play";mode="select";selectedTask=0;h.forEach((_,i)=>paint(i,null));paint(selectedTask,playColor(0));sendLEDState();update();return;}
 if(mode==="two"){playReturnMode = "two";selectSource="play";mode="select";selectedTask=0;h.forEach((_,i)=>paint(i,null));paint(selectedTask,playColor(0));sendLEDState();update();return;}
 if(mode==="demo"){clearInterval(demoTimer);demoTimer=null;selectSource="make";mode="select";selectedTask=0;;h.forEach((_,i)=>paint(i,null));paint(selectedTask,playColor(0));sendLEDState();update();return;}
-if(mode==="select"){if(selectSource==="play"){playTask=taskSets[selectedTask].filter(v=>v!==undefined);if(!playTask.length){hint.textContent="データなし";return;}playTurn=0;prevPlayHold=null;mode="play";h.forEach((_,i)=>paint(i,null));paint(playTask[0],playColor(0));await sendLEDState();update();return;}
+if(mode==="select"){if(selectSource==="play"){playTask=taskSets[selectedTask].filter(v=>v!==undefined);if(!playTask.length){hint.textContent="データなし";return;}playTurn=0;prevPlayHold=null;mode="play";h.forEach((_,i)=>paint(i,null));paint(playTask[0],playColor(0));await sendLED("PLAY");await sendLEDState();update();return;}
 if(selectSource==="make"){mode="make";currentTask = taskSets[selectedTask]? [...taskSets[selectedTask]]: [];editTurn = 0;h.forEach((_,i)=>paint(i,null));if(currentTask[0]!==undefined){paint(currentTask[0],5);}sendLEDState();update();return;}}
 if(mode==="make"){taskSets[selectedTask] = currentTask.filter(v => v !== undefined);localStorage.setItem("vitalTaskSets",JSON.stringify(taskSets));mode="demo";randomDemo();demoTimer=setInterval(()=>{if(mode==="demo"){randomDemo();}},1000);update();return;}
 };

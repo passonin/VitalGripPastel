@@ -156,43 +156,6 @@ body{
   pointer-events:none;
   color:#666;
 }
-.btBtn{
-  width:66px;
-  height:48px;
-  border:0;
-  border-radius:14px;
-  background:#f6f6f6;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  cursor:pointer;
-  box-shadow:0 3px 8px #dcdcdc;
-  transition:.2s;
-}
-#volBtn{
-  width:66px;
-  padding:0;
-  line-height:1;
-}
-#volBtn svg{
-  display:block;
-  width:52px;
-  height:42px;
-  overflow:visible;
-}
-.btIcon{
-  width:34px;
-  height:34px;
-  fill:none;
-  stroke:#fff;
-  stroke-width:2.3;
-  stroke-linecap:round;
-  stroke-linejoin:round;
-}
-.btBtn.muted{
-  background:#e9ecef;
-  box-shadow:0 0 10px #dcdcdc;
-}
 .connectPage{
   position:fixed;
   inset:0;
@@ -238,11 +201,7 @@ align-items:center;">
     <div id="connectStatus" class="connectStatus"></div>
 </div></div>
 <main class="app" id="mainPage" style="display:none;">
-<div class="titleRow">
-  <div style="width:62px;"></div>
-  <div class="title">Vital Grip</div>
-  <button id="volBtn" class="btBtn" title="Volume" aria-label="音量レベル1"></button>
-</div><div class="glow"></div><section class="grid" id="grid"></section>
+<div class="titleRow"><div class="title">Vital Grip</div></div><div class="glow"></div><section class="grid" id="grid"></section>
 <section class="status"><div class="cell"><div class="label">Mode</div><div class="value" id="mode">OFF</div></div><div class="cell"><div class="label">Select</div><div class="value" id="sel">0/12</div></div><div class="cell"><div class="label">Turn</div><div class="value" id="cnt">0/30</div></div></section>
 <div class="hint" id="hint">電源を押して開始</div>
 <nav class="controls"><button class="ctrl power" id="power">⏻</button><button class="ctrl next" id="next">▷</button><button class="ctrl color" id="color">△</button><button class="ctrl ok" id="ok">✓</button></nav>
@@ -262,13 +221,127 @@ let bleServer=null;
 let bleService=null;
 let bleCharacteristic=null;
 let bleReceiveBuffer="";
-const VOLUME_STORAGE_KEY = "vitalGripVolume";
-let volumeLevel = (() => {
-  const saved = Number(localStorage.getItem(VOLUME_STORAGE_KEY));
-  return Number.isInteger(saved) && saved >= 0 && saved <= 3 ? saved : 1;
-})(); // 1→2→3→ミュート→1
 let nextBusy=false;
-// BLE GATT write queue: TURNNEXTと5byte LEDデータの書き込みを直列化
+let audioContext = null;
+// 音量はスマホ本体の音量ボタンで調整。ESP32のブザーはVOL,0でミュート。
+const PHONE_SOUND_GAIN = 0.055;
+
+function getAudioContext(){
+  if (audioContext) return audioContext;
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) {
+    console.warn("Web Audio API is not supported");
+    return null;
+  }
+  audioContext = new AudioContextClass();
+  return audioContext;
+}
+
+async function unlockPhoneAudio(){
+  const ctx = getAudioContext();
+  if (ctx && ctx.state === "suspended") {
+    try { await ctx.resume(); }
+    catch (err) { console.log("Audio resume error:", err); }
+  }
+}
+
+// ESP32のパッシブブザーに近い矩形波音をスマホで再生する。
+function playPhoneTone(freq, startTime, baseDurationMs, gainMultiplier = 1){
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const duration = baseDurationMs / 1000;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "square";
+  osc.frequency.setValueAtTime(freq, startTime);
+  gain.gain.setValueAtTime(0.0001, startTime);
+  const toneGain = Math.min(0.95, PHONE_SOUND_GAIN * gainMultiplier);
+  gain.gain.linearRampToValueAtTime(toneGain, startTime + 0.004);
+  gain.gain.setValueAtTime(toneGain, Math.max(startTime + 0.005, startTime + duration - 0.008));
+  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + duration + 0.005);
+}
+
+function playPattern(notes, gainMultiplier = 1){
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  let t = ctx.currentTime + 0.015;
+  for (const [freq, baseMs, gapMs] of notes){
+    playPhoneTone(freq, t, baseMs, gainMultiplier);
+    t += (baseMs + gapMs) / 1000;
+  }
+}
+
+function playBLEOnSound(){
+  playPattern([[2000,60,30],[3000,60,30],[4000,80,0]]);
+}
+
+function playPowerOnSound(){
+  playPattern([[2000,60,30],[2500,60,30],[3000,80,0]]);
+}
+
+function playPlaySound(){
+  playPattern([[2000,200,60],[3000,100,60]]);
+}
+
+function playNextWhistle(){
+  playPattern([[4000,80,0]]);
+}
+
+function playPowerOffSound(){
+  playPattern([[1500,60,20],[1000,100,0]]);
+}
+
+function playPlayEndSound(){
+  playPattern([[4100,50,90],[4100,420,0]], 2);
+}
+
+function playClickSound(){
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  if (ctx.state === "suspended") {
+    ctx.resume().catch(err => console.log("Audio resume error:", err));
+  }
+
+  const t = ctx.currentTime + 0.003;
+  const level = PHONE_SOUND_GAIN * 0.72;
+
+  // 短いノイズでアタックを作り、低めの音を重ねて乾いた「コッ」にする。
+  const length = Math.floor(ctx.sampleRate * 0.012);
+  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+  const samples = buffer.getChannelData(0);
+  for (let i = 0; i < length; i++) {
+    const fade = 1 - i / length;
+    samples[i] = (Math.random() * 2 - 1) * fade * fade;
+  }
+
+  const noise = ctx.createBufferSource();
+  const filter = ctx.createBiquadFilter();
+  const noiseGain = ctx.createGain();
+  noise.buffer = buffer;
+  filter.type = "lowpass";
+  filter.frequency.setValueAtTime(2600, t);
+  noiseGain.gain.setValueAtTime(level * 0.42, t);
+  noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.010);
+  noise.connect(filter).connect(noiseGain).connect(ctx.destination);
+  noise.start(t);
+  noise.stop(t + 0.012);
+
+  const osc = ctx.createOscillator();
+  const bodyGain = ctx.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(760, t);
+  osc.frequency.exponentialRampToValueAtTime(480, t + 0.025);
+  bodyGain.gain.setValueAtTime(level, t);
+  bodyGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.032);
+  osc.connect(bodyGain).connect(ctx.destination);
+  osc.start(t);
+  osc.stop(t + 0.035);
+}
+
+// BLE GATT write queue: TURNNEXTとHOLD通知の書き込みを直列化
 let bleWriteQueue = Promise.resolve();
 
 function enqueueBLEWrite(value, label="BLE WRITE") {
@@ -288,30 +361,6 @@ function enqueueBLEWrite(value, label="BLE WRITE") {
   // 1件が失敗しても、後続のBLE送信を止めない
   bleWriteQueue = task.then(() => undefined, () => undefined);
   return task;
-}
-
-function updateVolumeButton(){
-  const btn = document.getElementById("volBtn");
-  if(!btn) return;
-
-  // 音量0=波なし、1=波1本、2=波2本、3=波3本
-  const waves = [
-    '<path d="M23 14 Q29 20 23 26"/>',
-    '<path d="M23 14 Q29 20 23 26"/><path d="M27 10 Q36 20 27 30"/>',
-    '<path d="M23 14 Q29 20 23 26"/><path d="M27 10 Q36 20 27 30"/><path d="M31 6 Q43 20 31 34"/>'
-  ];
-  const waveMarkup = volumeLevel === 0 ? '' : waves[volumeLevel - 1];
-
-  btn.innerHTML = `
-    <svg viewBox="0 0 48 40" role="img" aria-hidden="true">
-      <path d="M3 15 H9 L19 7 V33 L9 25 H3 Z" fill="#111" stroke="#111" stroke-linejoin="round"/>
-      <g fill="none" stroke="#111" stroke-width="2.5" stroke-linecap="round">
-        ${waveMarkup}
-      </g>
-    </svg>`;
-  btn.title = volumeLevel === 0 ? "ミュート" : `音量レベル${volumeLevel}`;
-  btn.setAttribute("aria-label", btn.title);
-  btn.classList.toggle("muted", volumeLevel === 0);
 }
 
 //localStorage.removeItem("vitalTaskSets");
@@ -350,8 +399,12 @@ document.getElementById("connectStatus").textContent ="接続完了";
 hint.textContent="電源を押して開始";
 document.getElementById("connectPage").style.display="none";
 document.getElementById("mainPage").style.display="flex";
+// BLE接続完了音（スマホから再生）
+await unlockPhoneAudio();
+playBLEOnSound();
+// 保存済み音量をESP32へ設定してから接続時のALLOFFを送る。
+await sendLED("VOL,0");
 await sendLED("ALLOFF");
-await sendLED("VOL," + volumeLevel);
 bleDevice.addEventListener("gattserverdisconnected",()=>{
 document.getElementById("connectPage").style.display="flex";
 document.getElementById("mainPage").style.display="none";
@@ -363,20 +416,12 @@ bleService=null;
 bleServer=null;
 bleReceiveBuffer="";
 hint.textContent="無線切断";});}catch(err){console.log(err);document.getElementById("connectStatus").textContent="接続失敗";}}
-document.getElementById("connectBtn").onclick =
-async ()=>{document.getElementById("connectStatus").textContent ="接続中...";await connectBLE();};
-document.getElementById("volBtn").onclick = async ()=>{
-  volumeLevel = volumeLevel >= 3 ? 0 : volumeLevel + 1;
-  localStorage.setItem(VOLUME_STORAGE_KEY, String(volumeLevel));
-  updateVolumeButton();
-
-  if (bleCharacteristic) {
-    await sendLED("VOL," + volumeLevel);
-  }
+document.getElementById("connectBtn").onclick = async ()=>{
+  document.getElementById("connectStatus").textContent = "接続中...";
+  await unlockPhoneAudio();
+  await connectBLE();
 };
 
-// ページ起動時に保存済みの音量表示を復元
-updateVolumeButton();
 function onBleReceive(e){let s=new TextDecoder().decode(e.target.value).trim();console.log("BLE RX:",s);if(s==="NEXT")nextTurn();}
 
 async function nextTurn(){
@@ -390,7 +435,46 @@ async function nextTurn(){
 
     nextBusy=true;
 
-    try{if(mode!=="play")return;playTurn++;if(playTurn>=playTask.length){h.forEach((_,i)=>paint(i,null));prevPlayHold=null;await sendLED("ALLOFF");mode=playReturnMode;if(mode==="two")halves();else previewColor(one);update();return;}h.forEach((_,i)=>paint(i,null));paint(playTask[playTurn-1],playColor(playTurn-1));paint(playTask[playTurn],playColor(playTurn));await sendLEDState();update();}
+    try {
+        if (mode !== "play") return;
+
+        // 最後のNEXTだけは通常の笛音ではなく、終了専用の「ピッ、ピーーー」を鳴らす。
+        const isFinalTurn = (playTurn + 1 >= playTask.length);
+        if (isFinalTurn) playPlayEndSound();
+        else playNextWhistle();
+
+        playTurn++;
+
+        if (playTurn >= playTask.length) {
+            h.forEach((_, i) => paint(i, null));
+            prevPlayHold = null;
+            await sendLED("ALLOFF");
+            mode = playReturnMode;
+            if (mode === "two") halves();
+            else previewColor(one);
+            update();
+            return;
+        }
+
+        // 直前のHoldは点灯したまま残し、2つ前のHoldを消灯する。
+        // 同じHold番号が直前または新しいHoldにも使われている場合は消灯しない。
+        const newHold = playTask[playTurn];
+        const keepHold = playTask[playTurn - 1];
+        const offTurnIndex = playTurn - 2;
+        let offHoldId = 0; // 0は消灯対象なし（最初のNEXT）
+
+        if (offTurnIndex >= 0) {
+            const candidateOffHold = playTask[offTurnIndex];
+            if (candidateOffHold !== keepHold && candidateOffHold !== newHold) {
+                paint(candidateOffHold, null);
+                offHoldId = candidateOffHold + 1; // Hold番号は1～12
+            }
+        }
+
+        paint(newHold, playColor(playTurn));
+        await sendPlayTurn(playTurn, offHoldId);
+        update();
+    }
 
     finally{
 
@@ -407,6 +491,26 @@ async function sendLED(cmd){
     new TextEncoder().encode(cmd + "\n"),
     "BLE COMMAND TX " + cmd
   );
+}
+
+// PLAY開始時：最初のHoldだけを点灯する。
+// playTaskは0始まり、ESP32/PICへのHold番号は1始まり。
+async function sendPlayHold(turnIndex){
+  if (turnIndex < 0 || turnIndex >= playTask.length) return false;
+  const holdId = playTask[turnIndex] + 1;
+  const color = playColor(turnIndex) + 1; // PIC SHOWは1～7
+  return sendLED(`HOLD,${holdId},${color}`);
+}
+
+// PLAY中のTurn更新：新しいHoldを点灯し、必要なら2つ前のHoldを消灯する。
+// 書式: TURN,<点灯Hold 1-12>,<色 1-7>,<消灯Hold 0-12>
+// offHoldId=0 の場合は消灯せず、点灯だけ行う。
+async function sendPlayTurn(turnIndex, offHoldId = 0){
+  if (turnIndex < 1 || turnIndex >= playTask.length) return false;
+  if (offHoldId < 0 || offHoldId > 12) return false;
+  const holdId = playTask[turnIndex] + 1;
+  const color = playColor(turnIndex) + 1;
+  return sendLED(`TURN,${holdId},${color},${offHoldId}`);
 }
 
 async function sendLEDState(){
@@ -469,7 +573,7 @@ if (!Array.isArray(taskSets[0]) || taskSets[0].length === 0) {
 }
 
 h.forEach(btn => {btn.onclick = async () => {let idx = Number(btn.dataset.i);
-if(mode==="make"){currentTask[editTurn] = idx;h.forEach((_,i)=>paint(i,null));paint(idx,5);update();return;}
+if(mode==="make"){playClickSound();currentTask[editTurn] = idx;h.forEach((_,i)=>paint(i,null));paint(idx,5);update();return;}
 if(mode==="play"){
   // TURNNEXTもBLE送信キューに登録し、LED状態データと重ねない
   await sendLED("TURNNEXT");
@@ -497,29 +601,38 @@ else if(mode==="play"){cntE.textContent=`${playTurn+1}/${playTask.length}`;const
 else if(mode==="make")hint.textContent=`Task${selectedTask+1} ${editTurn+1}/${currentTask.length} Hold選択→▷次△前✅保存`;
 else hint.textContent=`Task ${play+1}/12 ▷：次Task`}
 
-document.getElementById("power").onclick=async()=>{on=!on;
-if(on){glowBar.classList.add("powerOn");mode="one";one=0;left=0;right=6;await sendLED("POWERON");previewColor(0);}
-else{glowBar.classList.remove("powerOn");clearInterval(demoTimer);demoTimer=null;h.forEach((_,i)=>paint(i,null));
-await sendLED("ALLOFF");mode="off";}update();};
+document.getElementById("power").onclick=async()=>{
+on=!on;
+if(on){
+  await unlockPhoneAudio();
+  playPowerOnSound();
+  glowBar.classList.add("powerOn");mode="one";one=0;left=0;right=6;previewColor(0);
+}
+else{
+  playPowerOffSound();
+  glowBar.classList.remove("powerOn");clearInterval(demoTimer);demoTimer=null;h.forEach((_,i)=>paint(i,null));
+  await sendLED("ALLOFF");mode="off";
+}
+update();};
 
 document.getElementById("next").onclick=()=>{
 if(!on)return;
-if(mode==="one"){mode="two";twoPlay=true;resetPairs();[left,right]=pairs.pop();pairNo++;halves();update();return}
-if(mode==="two"){mode="demo";randomDemo();demoTimer=setInterval(()=>{if(mode==="demo"){randomDemo();}},1000);update();return}
-if(mode==="demo"){clearInterval(demoTimer);demoTimer=null;mode="one";twoPlay=false;one=0;previewColor(one);update();return}
-if(mode==="select"){selectedTask=(selectedTask+1)%12;h.forEach((_,i)=>paint(i,null));paint(selectedTask,playColor(playTurn));sendLEDState();update();return;}
-if(mode==="make"){if(currentTask[editTurn] === undefined){return;}editTurn++;if(editTurn >= currentTask.length){currentTask.push(undefined);}h.forEach((_,i)=>paint(i,null));if(currentTask[editTurn] !== undefined){paint(currentTask[editTurn],5);}sendLEDState();update();return;}
+if(mode==="one"){playClickSound();mode="two";twoPlay=true;resetPairs();[left,right]=pairs.pop();pairNo++;halves();update();return}
+if(mode==="two"){playClickSound();mode="demo";randomDemo();demoTimer=setInterval(()=>{if(mode==="demo"){randomDemo();}},1000);update();return}
+if(mode==="demo"){playClickSound();clearInterval(demoTimer);demoTimer=null;mode="one";twoPlay=false;one=0;previewColor(one);update();return}
+if(mode==="select"){playClickSound();selectedTask=(selectedTask+1)%12;h.forEach((_,i)=>paint(i,null));paint(selectedTask,playColor(playTurn));sendLEDState();update();return;}
+if(mode==="make"){if(currentTask[editTurn] === undefined){return;}playClickSound();editTurn++;if(editTurn >= currentTask.length){currentTask.push(undefined);}h.forEach((_,i)=>paint(i,null));if(currentTask[editTurn] !== undefined){paint(currentTask[editTurn],5);}sendLEDState();update();return;}
 if(mode==="play"){return;}};
 
-document.getElementById("color").onclick=()=>{if(!on)return;if(mode==="one"){one=(one+1)%7;previewColor(one)}else if(mode==="two"){if(!pairs.length) resetPairs();[left,right] = pairs.pop();pairNo++;halves();};
-if(mode==="make"){if(editTurn>0){editTurn--;h.forEach((_,i)=>paint(i,null));paint(currentTask[editTurn],5);sendLEDState();update();}return;}update()};
+document.getElementById("color").onclick=()=>{if(!on)return;if(mode==="one"){playClickSound();one=(one+1)%7;previewColor(one)}else if(mode==="two"){playClickSound();if(!pairs.length) resetPairs();[left,right] = pairs.pop();pairNo++;halves();};
+if(mode==="make"){if(editTurn>0){playClickSound();editTurn--;h.forEach((_,i)=>paint(i,null));paint(currentTask[editTurn],5);sendLEDState();update();}return;}update()};
 document.getElementById("ok").onclick=async()=>{if(!on)return;
-if(mode==="one"){playReturnMode = "one";selectSource="play";mode="select";selectedTask=0;h.forEach((_,i)=>paint(i,null));paint(selectedTask,playColor(0));sendLEDState();update();return;}
-if(mode==="two"){playReturnMode = "two";selectSource="play";mode="select";selectedTask=0;h.forEach((_,i)=>paint(i,null));paint(selectedTask,playColor(0));sendLEDState();update();return;}
-if(mode==="demo"){clearInterval(demoTimer);demoTimer=null;selectSource="make";mode="select";selectedTask=0;;h.forEach((_,i)=>paint(i,null));paint(selectedTask,playColor(0));sendLEDState();update();return;}
-if(mode==="select"){if(selectSource==="play"){playTask=taskSets[selectedTask].filter(v=>v!==undefined);if(!playTask.length){hint.textContent="データなし";return;}playTurn=0;prevPlayHold=null;mode="play";h.forEach((_,i)=>paint(i,null));paint(playTask[0],playColor(0));await sendLED("PLAY");await sendLEDState();update();return;}
-if(selectSource==="make"){mode="make";currentTask = taskSets[selectedTask]? [...taskSets[selectedTask]]: [];editTurn = 0;h.forEach((_,i)=>paint(i,null));if(currentTask[0]!==undefined){paint(currentTask[0],5);}sendLEDState();update();return;}}
-if(mode==="make"){taskSets[selectedTask] = currentTask.filter(v => v !== undefined);localStorage.setItem("vitalTaskSets",JSON.stringify(taskSets));mode="demo";randomDemo();demoTimer=setInterval(()=>{if(mode==="demo"){randomDemo();}},1000);update();return;}
+if(mode==="one"){playClickSound();playReturnMode = "one";selectSource="play";mode="select";selectedTask=0;h.forEach((_,i)=>paint(i,null));paint(selectedTask,playColor(0));sendLEDState();update();return;}
+if(mode==="two"){playClickSound();playReturnMode = "two";selectSource="play";mode="select";selectedTask=0;h.forEach((_,i)=>paint(i,null));paint(selectedTask,playColor(0));sendLEDState();update();return;}
+if(mode==="demo"){playClickSound();clearInterval(demoTimer);demoTimer=null;selectSource="make";mode="select";selectedTask=0;;h.forEach((_,i)=>paint(i,null));paint(selectedTask,playColor(0));sendLEDState();update();return;}
+if(mode==="select"){if(selectSource==="play"){playTask=taskSets[selectedTask].filter(v=>v!==undefined);if(!playTask.length){hint.textContent="データなし";return;}playTurn=0;prevPlayHold=null;mode="play";h.forEach((_,i)=>paint(i,null));paint(playTask[0],playColor(0));await sendLED("PLAY");await sendPlayHold(0);playPlaySound();update();return;}
+if(selectSource==="make"){playClickSound();mode="make";currentTask = taskSets[selectedTask]? [...taskSets[selectedTask]]: [];editTurn = 0;h.forEach((_,i)=>paint(i,null));if(currentTask[0]!==undefined){paint(currentTask[0],5);}sendLEDState();update();return;}}
+if(mode==="make"){playClickSound();taskSets[selectedTask] = currentTask.filter(v => v !== undefined);localStorage.setItem("vitalTaskSets",JSON.stringify(taskSets));mode="demo";randomDemo();demoTimer=setInterval(()=>{if(mode==="demo"){randomDemo();}},1000);update();return;}
 };
 
 update();

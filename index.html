@@ -548,8 +548,8 @@ const g=document.getElementById("grid"),modeE=document.getElementById("mode"),se
 for(let i=0;i<12;i++){let b=document.createElement("button");b.className="hold";b.dataset.i=i;g.appendChild(b)}
 const h=[...document.querySelectorAll(".hold")];
 // TASK1の仮初期設定（ホールド番号を0始まりに変換）
-// Hold番号: 2,4,3,1,2,4,3,1
-const DEFAULT_TASK1 = [1, 3, 2, 0, 1, 3, 2, 0];
+// Hold番号: 2,4,1,3,2,4,1,3
+const DEFAULT_TASK1 = [1, 3, 0, 2, 1, 3, 0, 2];
 
 const saved = localStorage.getItem("vitalTaskSets");
 if (saved) {
